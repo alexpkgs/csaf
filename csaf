@@ -1,84 +1,23 @@
 #!/bin/sh
 
-# init stuff
 get_init() {
     os=$(uname -o)
     case "$os" in
-        Android)
-            echo "init.rc"
-            ;;
-        *)
-            # check openrc out
-            if [ -f "/sbin/openrc" ]; then
-                echo "openrc"
-            else
-                # reading /proc/1/comm
-                if [ -e "/proc/1/comm" ]; then
-                    awk '{print $1}' /proc/1/comm
-                else
-                    echo "unknown"
-                fi
-            fi
-            ;;
+        Android) echo "init.rc" ;;
+        *) 
+            [ -f "/sbin/openrc" ] && echo "openrc" || awk '{print $1}' /proc/1/comm 2>/dev/null || echo "unknown"
     esac
 }
 
-# read your book name
-host=$(< /proc/sys/kernel/hostname)
+. /etc/os-release 2>/dev/null || . /usr/lib/os-release 2>/dev/null
 
-# os
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-elif [ -f /usr/lib/os-release ]; then
-    . /usr/lib/os-release
-fi
+CPU=$(awk -F: '/model name/ {print $2; exit}' /proc/cpuinfo | awk '{print $1 " " $2}')
 
-# cpu model
-CPU=$(awk -F: '/model name/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' /proc/cpuinfo | awk '{print $1, $2}')
+WM=${WM:-${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-$(tail -n 1 "${HOME}/.xinitrc" | awk '{print $2}')}}}
 
-# popcorn
-KERNEL=$(uname -srm)
-
-# wm
-if [ -z "$WM" ]; then
-    if [ -n "$XDG_CURRENT_DESKTOP" ]; then
-        WM="$XDG_CURRENT_DESKTOP"
-    elif [ -n "$DESKTOP_SESSION" ]; then
-        WM="$DESKTOP_SESSION"
-    else
-        WM=$(tail -n 1 "${HOME}/.xinitrc" | awk '{print $2}')
-    fi
-fi
-
-# shelle
-SHELL=$(basename "$SHELL")
-
-# simply kernel
-kernel=$(uname -r)
-
-# Define colors (keeping this section as-is since it's mostly setup)
-bc=$(tput bold)       # bold
-c0=$(tput setaf 0)    # black
-c1=$(tput setaf 1)    # red
-c2=$(tput setaf 2)    # green
-c3=$(tput setaf 3)    # yellow
-c4=$(tput setaf 4)    # blue
-c5=$(tput setaf 5)    # magenta
-c6=$(tput setaf 6)    # cyan
-c7=$(tput setaf 7)    # white
-rc=$(tput sgr0)      # reset
-
-# Colors for labels
-lc="${bc}${c6}"      # labels
-nc="${bc}${c6}"      # user and hostname
-tc="${bc}${c7}"      # text
-fc="${bc}${c6}"      # first color
-sc="${c6}"          # second color
-
-# Output results (using printf for efficiency)
 printf "%s\n" \
-    "${lc}wm ~ ${rc}${lc}${WM}${rc}" \
-    "${lc}os ~ ${rc}${tc}${PRETTY_NAME}${rc}" \
-    "${lc}sh ~ ${rc}${tc}${SHELL}${rc}" \
-    "${lc}sv ~ ${rc}${tc}$(get_init)${rc}" \
-    "${lc}kr ~ ${rc}${tc}${kernel}${rc}"
+    "wm ~ ${WM}" \
+    "os ~ ${PRETTY_NAME}" \
+    "sh ~ $(basename "$SHELL")" \
+    "sv ~ $(get_init)" \
+    "kr ~ $(uname -r)"
