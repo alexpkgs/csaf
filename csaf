@@ -1,87 +1,78 @@
 #!/bin/sh
-## INFO
 
 #getting the init
 get_init() {
     os="$(uname -o)"
-    if [[ "$os" = "Android" ]]; then
-       echo "init.rc"
-    elif [[ ! $(pidof systemd) ]]; then
-        if [[ -f "/sbin/openrc" ]]; then
-            echo "openrc"
-        else
-         echo $(cat /proc/1/comm)
-        fi
-    else
-        echo "systemD"
-    fi
+    case "$os" in
+        Android)
+            echo "init.rc"
+            ;;
+        *)
+            if [ -f "/sbin/openrc" ]; then
+                echo "openrc"
+            elif [ -e "/proc/1/comm" ]; then
+                awk '{print $1}' /proc/1/comm
+            else
+                echo "unknown"
+            fi
+            ;;
+    esac
 }
 
-# user is already defined
-read -r host < /proc/sys/kernel/hostname
+# Read hostname
+host=$(cat /proc/sys/kernel/hostname)
 
+# Detect OS information
 for os in /etc/os-release /usr/lib/os-release; do
-	[ -f $os ] && . $os && break
+    if [ -f "$os" ]; then
+        . "$os"
+        break
+    fi
 done
 
-CPU="$(awk 'BEGIN{FS=":"} /model name/ { print $2; exit }' /proc/cpuinfo | sed 's/ @/\n/' | head -1 | head -c -4)"
-KERNEL="$(uname -srm)"
-UPTIME="$(uptime -p | sed s:"up "::)"
-# Remove the line defining PACKAGES
-# PACKAGES="$(pacman -Q | wc -l)"
-# shell is already defined
+# Get CPU model
+CPU=$(awk -F: '/model name/ { print $2; exit }' /proc/cpuinfo | sed 's/ @/\n/' | head -1 | sed 's/ //')
+
+# Get Kernel version
+KERNEL=$(uname -srm)
+
+# Detect window manager
 if [ -z "${WM}" ]; then
-	if [ "${XDG_CURRENT_DESKTOP}" ]; then
-		envtype='WM'
-		WM="${XDG_CURRENT_DESKTOP}"
-	elif [ "${DESKTOP_SESSION}" ]; then
-		envtype='WM'
-		WM="${DESKTOP_SESSION}"
-	else
-		envtype='WM'
-		WM="$(tail -n 1 "${HOME}/.xinitrc" | cut -d ' ' -f 2)"
-	fi
-else
-	envtype='WM'
+    if [ -n "${XDG_CURRENT_DESKTOP}" ]; then
+        WM="${XDG_CURRENT_DESKTOP}"
+    elif [ -n "${DESKTOP_SESSION}" ]; then
+        WM="${DESKTOP_SESSION}"
+    else
+        WM=$(tail -n 1 "${HOME}/.xinitrc" | cut -d ' ' -f 2)
+    fi
 fi
-SHELL="$(basename ${SHELL})"
 
-## kernel	
-	read -r _ _ version _ < /proc/version
-	ke=${version%%-*}
-        kernel="$(uname -r)"
+# Get shell name
+SHELL=$(basename "$SHELL")
 
-## DEFINE COLORS
+# Get kernel version
+kernel=$(uname -r)
 
-# probably don't change these
-bc="$(tput bold)"	# bold
-c0="$(tput setaf 0)"	# black
-c1="$(tput setaf 1)"	# red
-c2="$(tput setaf 2)"	# green
-c3="$(tput setaf 3)"	# yellow
-c4="$(tput setaf 4)"	# blue
-c5="$(tput setaf 5)"	# magenta
-c6="$(tput setaf 6)"	# cyan
-c7="$(tput setaf 7)"	# white
-rc="$(tput sgr0)"	# reset
+# Define colors
+bc=$(tput bold)       # bold
+c0=$(tput setaf 0)    # black
+c1=$(tput setaf 1)    # red
+c2=$(tput setaf 2)    # green
+c3=$(tput setaf 3)    # yellow
+c4=$(tput setaf 4)    # blue
+c5=$(tput setaf 5)    # magenta
+c6=$(tput setaf 6)    # cyan
+c7=$(tput setaf 7)    # white
+rc=$(tput sgr0)      # reset
 
-# you can change these
-lc="${bc}${c6}"		# labels
-nc="${bc}${c6}"		# user and hostname
-tc="${bc}${c7}"		# text
-fc="${bc}${c6}"		# first color
-sc="${c6}"		# second color
+# Colors for labels
+lc="${bc}${c6}"      # labels
+nc="${bc}${c6}"      # user and hostname
+tc="${bc}${c7}"      # text
+fc="${bc}${c6}"      # first color
+sc="${c6}"          # second color
 
-## OUTPUT
-cat << "EOF"
-           ____
-          /\' .\    _____
-         /: \___\  / .  /\
-         \' / . / /____/..\
-          \/___/  \'  '\  /
-                   \'__'\/
-
-EOF
+# Output results
 cat << EOF
         ${lc}wm ~ ${rc}${lc}${WM}${rc}
         ${lc}os ~ ${rc}${tc}${PRETTY_NAME}${rc}
