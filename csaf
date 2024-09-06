@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Function to get the init system
+# init stuff
 get_init() {
     os=$(uname -o)
     case "$os" in
@@ -8,11 +8,11 @@ get_init() {
             echo "init.rc"
             ;;
         *)
-            # Check for OpenRC or other init systems
+            # check openrc out
             if [ -f "/sbin/openrc" ]; then
                 echo "openrc"
             else
-                # Default to reading from /proc/1/comm
+                # reading /proc/1/comm
                 if [ -e "/proc/1/comm" ]; then
                     awk '{print $1}' /proc/1/comm
                 else
@@ -23,23 +23,23 @@ get_init() {
     esac
 }
 
-# Read hostname
+# read your book name
 host=$(< /proc/sys/kernel/hostname)
 
-# Detect OS information
+# os
 if [ -f /etc/os-release ]; then
     . /etc/os-release
 elif [ -f /usr/lib/os-release ]; then
     . /usr/lib/os-release
 fi
 
-# Get CPU model (use a single awk call)
+# cpu model
 CPU=$(awk -F: '/model name/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' /proc/cpuinfo | awk '{print $1, $2}')
 
-# Get Kernel version
+# popcorn
 KERNEL=$(uname -srm)
 
-# Detect window manager
+# wm
 if [ -z "$WM" ]; then
     if [ -n "$XDG_CURRENT_DESKTOP" ]; then
         WM="$XDG_CURRENT_DESKTOP"
@@ -50,10 +50,10 @@ if [ -z "$WM" ]; then
     fi
 fi
 
-# Get shell name
+# shelle
 SHELL=$(basename "$SHELL")
 
-# Get kernel version (simplify to a single call)
+# simply kernel
 kernel=$(uname -r)
 
 # Define colors (keeping this section as-is since it's mostly setup)
