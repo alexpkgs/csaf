@@ -1,2 +1,2 @@
 # csaf
-a fetch in shell
+A simple fetch made in posix shell
