@@ -1,23 +1,15 @@
 #!/bin/sh
 
 get_init() {
-    os=$(uname -o)
-    case "$os" in
-        Android) echo "init.rc" ;;
-        *) 
-            [ -f "/sbin/openrc" ] && echo "openrc" || awk '{print $1}' /proc/1/comm 2>/dev/null || echo "unknown"
-    esac
+    [ "$(uname -o)" = "Android" ] && echo "init.rc" || awk '{print $1}' /proc/1/comm 2>/dev/null || echo "unknown"
 }
 
-. /etc/os-release 2>/dev/null || . /usr/lib/os-release 2>/dev/null
+[ -f /etc/os-release ] && . /etc/os-release || . /usr/lib/os-release
 
-CPU=$(awk -F: '/model name/ {print $2; exit}' /proc/cpuinfo | awk '{print $1 " " $2}')
+printf "wm ~ %s\nos ~ %s\nsh ~ %s\nsv ~ %s\nkr ~ %s\n" \
+    "${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-$(awk '{print $2}' ~/.xinitrc | tail -n 1)}}" \
+    "${PRETTY_NAME}" \
+    "$(basename "$SHELL")" \
+    "$(get_init)" \
+    "$(uname -r)"
 
-WM=${WM:-${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-$(tail -n 1 "${HOME}/.xinitrc" | awk '{print $2}')}}}
-
-printf "%s\n" \
-    "wm ~ ${WM}" \
-    "os ~ ${PRETTY_NAME}" \
-    "sh ~ $(basename "$SHELL")" \
-    "sv ~ $(get_init)" \
-    "kr ~ $(uname -r)"
