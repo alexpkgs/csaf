@@ -1,59 +1,62 @@
 #!/bin/sh
 
-#getting the init
+# Function to get the init system
 get_init() {
-    os="$(uname -o)"
+    os=$(uname -o)
     case "$os" in
         Android)
             echo "init.rc"
             ;;
         *)
+            # Check for OpenRC or other init systems
             if [ -f "/sbin/openrc" ]; then
                 echo "openrc"
-            elif [ -e "/proc/1/comm" ]; then
-                awk '{print $1}' /proc/1/comm
             else
-                echo "unknown"
+                # Default to reading from /proc/1/comm
+                if [ -e "/proc/1/comm" ]; then
+                    awk '{print $1}' /proc/1/comm
+                else
+                    echo "unknown"
+                fi
             fi
             ;;
     esac
 }
 
 # Read hostname
-host=$(cat /proc/sys/kernel/hostname)
+host=$(< /proc/sys/kernel/hostname)
 
 # Detect OS information
-for os in /etc/os-release /usr/lib/os-release; do
-    if [ -f "$os" ]; then
-        . "$os"
-        break
-    fi
-done
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+elif [ -f /usr/lib/os-release ]; then
+    . /usr/lib/os-release
+fi
 
-# Get CPU model
-CPU=$(awk -F: '/model name/ { print $2; exit }' /proc/cpuinfo | sed 's/ @/\n/' | head -1 | sed 's/ //')
+# Get CPU model (use a single awk call)
+CPU=$(awk -F: '/model name/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' /proc/cpuinfo | awk '{print $1, $2}')
 
 # Get Kernel version
 KERNEL=$(uname -srm)
 
 # Detect window manager
-if [ -z "${WM}" ]; then
-    if [ -n "${XDG_CURRENT_DESKTOP}" ]; then
-        WM="${XDG_CURRENT_DESKTOP}"
-    elif [ -n "${DESKTOP_SESSION}" ]; then
-        WM="${DESKTOP_SESSION}"
+if [ -z "$WM" ]; then
+    if [ -n "$XDG_CURRENT_DESKTOP" ]; then
+        WM="$XDG_CURRENT_DESKTOP"
+    elif [ -n "$DESKTOP_SESSION" ]; then
+        WM="$DESKTOP_SESSION"
     else
-        WM=$(tail -n 1 "${HOME}/.xinitrc" | cut -d ' ' -f 2)
+        WM=$(tail -n 1 "${HOME}/.xinitrc" | awk '{print $2}')
     fi
 fi
 
 # Get shell name
 SHELL=$(basename "$SHELL")
 
-# Get kernel version
+# Get kernel version (simplify to a single call)
 kernel=$(uname -r)
 
-# Define colors
+# Define colors (keeping this section as-is since it's mostly setup)
 bc=$(tput bold)       # bold
 c0=$(tput setaf 0)    # black
 c1=$(tput setaf 1)    # red
@@ -72,11 +75,10 @@ tc="${bc}${c7}"      # text
 fc="${bc}${c6}"      # first color
 sc="${c6}"          # second color
 
-# Output results
-cat << EOF
-        ${lc}wm ~ ${rc}${lc}${WM}${rc}
-        ${lc}os ~ ${rc}${tc}${PRETTY_NAME}${rc}
-        ${lc}sh ~ ${rc}${tc}${SHELL}${rc}
-        ${lc}sv ~ ${rc}${tc}$(get_init)${rc}
-        ${lc}kr ~ ${rc}${tc}${kernel}${rc}
-EOF
+# Output results (using printf for efficiency)
+printf "%s\n" \
+    "${lc}wm ~ ${rc}${lc}${WM}${rc}" \
+    "${lc}os ~ ${rc}${tc}${PRETTY_NAME}${rc}" \
+    "${lc}sh ~ ${rc}${tc}${SHELL}${rc}" \
+    "${lc}sv ~ ${rc}${tc}$(get_init)${rc}" \
+    "${lc}kr ~ ${rc}${tc}${kernel}${rc}"
