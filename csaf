@@ -1,10 +1,21 @@
 #!/bin/sh
 
+ascii_art() {
+    cat << "EOF"
+  .-.    
+  oo|      
+ /`'\     
+(\_;/)
+EOF
+}
+
 get_init() {
     [ "$(uname -o)" = "Android" ] && echo "init.rc" || awk '{print $1}' /proc/1/comm 2>/dev/null || echo "unknown"
 }
 
 [ -f /etc/os-release ] && . /etc/os-release || . /usr/lib/os-release
+
+ascii_art
 
 printf "wm ~ %s\nos ~ %s\nsh ~ %s\nsv ~ %s\nkr ~ %s\n" \
     "${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-$(awk '{print $2}' ~/.xinitrc | tail -n 1)}}" \
@@ -12,4 +23,5 @@ printf "wm ~ %s\nos ~ %s\nsh ~ %s\nsv ~ %s\nkr ~ %s\n" \
     "$(basename "$SHELL")" \
     "$(get_init)" \
     "$(uname -r)"
+
 
